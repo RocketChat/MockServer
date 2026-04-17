@@ -1,8 +1,10 @@
-FROM golang:1.23-alpine AS build
+FROM --platform=$BUILDPLATFORM golang:1.23-alpine AS build
+ARG TARGETOS
+ARG TARGETARCH
 WORKDIR /src
 COPY go.mod ./
 COPY main.go ./
-RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o /mock-server .
+RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -ldflags="-s -w" -o /mock-server .
 RUN adduser -D -u 1001 mockuser
 
 FROM scratch
