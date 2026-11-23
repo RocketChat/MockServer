@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"mime"
 	"net/http"
 	"os"
 	"strings"
@@ -33,6 +34,7 @@ type server struct {
 	mocks       map[string][]*MockRule
 	dynamicBulk *DynamicBulkRule
 	log         []RequestLog
+	fixtures    http.Handler
 }
 
 type RequestLog struct {
@@ -259,6 +261,10 @@ func (s *server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	case r.URL.Path == "/__mock/health" && r.Method == http.MethodGet:
 		s.handleHealth(w, r)
 		return
+	case strings.HasPrefix(r.URL.Path, "/__fixtures/") && (r.Method == http.MethodGet || r.Method == http.MethodHead):
+		s.fixtures.ServeHTTP(w, r)
+		log.Printf("FILE %s %s", r.Method, r.URL.Path)
+		return
 	}
 
 	var bodyBytes json.RawMessage
@@ -350,8 +356,17 @@ func main() {
 		port = "8080"
 	}
 
+	fixturesDir := os.Getenv("FIXTURES_DIR")
+	if fixturesDir == "" {
+		fixturesDir = "/fixtures"
+	}
+
+	// The image is built FROM scratch, so there is no system mime.types to map extensions from.
+	_ = mime.AddExtensionType(".zip", "application/zip")
+
 	s := &server{
-		mocks: make(map[string][]*MockRule),
+		mocks:    make(map[string][]*MockRule),
+		fixtures: http.StripPrefix("/__fixtures/", http.FileServer(http.Dir(fixturesDir))),
 	}
 
 	log.Printf("mock-server listening on :%s", port)
