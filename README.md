@@ -23,6 +23,7 @@ mock-server -healthcheck
 | Environment Variable | Default | Description |
 |---|---|---|
 | `PORT` | `8080` | HTTP listen port |
+| `FIXTURES_DIR` | `/fixtures` | Directory served under `/__fixtures/` |
 
 ## Control API
 
@@ -177,6 +178,16 @@ Health check endpoint.
 ```json
 { "status": "ok" }
 ```
+
+## Static Fixtures
+
+`GET /__fixtures/<path>` serves `<FIXTURES_DIR>/<path>` as-is, for responses that cannot be expressed as a JSON mock body (binary files such as app packages). Fixtures are read from disk on each request, so `/__mock/reset` does not affect them. Mount the directory into the container:
+
+```bash
+docker run -v "$PWD/fixtures:/fixtures:ro" -p 8080:8080 ghcr.io/rocketchat/mockserver:main
+```
+
+`Content-Type` comes from the file extension (`.zip` is `application/zip`), falling back to content sniffing.
 
 ## Matching Behavior
 
